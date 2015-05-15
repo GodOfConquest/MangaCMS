@@ -11,8 +11,9 @@ import json
 import bs4
 import TextScrape.RelinkLookup
 import urllib.error
+import FeedScrape.AmqpInterface
 # import TextScrape.RELINKABLE as RELINKABLE
-
+import settings
 # pylint: disable=W0201
 
 class EmptyFeedError(Exception):
@@ -31,10 +32,16 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 		self.scan = []
 		for plugin in pdata:
 			for feed in plugin['feeds']:
-				self.scan.append((feed, plugin['pluginName'], plugin['tableName'], plugin['key']))
+				self.scan.append((feed, plugin['pluginName'], plugin['tableName'], plugin['key'], plugin['badwords']))
 
 		self.scan.sort()
-
+		amqp_settings = {}
+		amqp_settings["RABBIT_CLIENT_NAME"] = settings.RABBIT_CLIENT_NAME
+		amqp_settings["RABBIT_LOGIN"]       = settings.RABBIT_LOGIN
+		amqp_settings["RABBIT_PASWD"]       = settings.RABBIT_PASWD
+		amqp_settings["RABBIT_SRVER"]       = settings.RABBIT_SRVER
+		amqp_settings["RABBIT_VHOST"]       = settings.RABBIT_VHOST
+		self.amqpint = FeedScrape.AmqpInterface.RabbitQueueHandler(settings=amqp_settings)
 
 
 	# @profile
@@ -49,7 +56,7 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 			import webFunctions
 			self.wg = webFunctions.WebGetRobust(logPath='Main.Text.Feed.Web')
 
-		for feedUrl, pluginName, tableName, tableKey in self.scan:
+		for feedUrl, pluginName, tableName, tableKey, badwords in self.scan:
 			# So.... Feedparser shits itself on the feed content,
 			# because it's character detection mechanism is apparently
 			# total crap.
@@ -62,11 +69,11 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 				feed = self.parseFeed(rawFeed)
 
 				data = self.processFeed(feed, feedUrl)
-				self.insertFeed(tableName, tableKey, pluginName, feedUrl, data)
-				
+				self.insertFeed(tableName, tableKey, pluginName, feedUrl, data, badwords)
+
 			except urllib.error.URLError:
 				self.log.error('Failure retrieving feed at url "%s"!', feedUrl)
-			 
+
 
 	def extractContents(self, contentDat):
 		# TODO: Add more content type parsing!
@@ -151,7 +158,7 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 				self.log.error('Empty item in feed?')
 				self.log.error('Feed url: %s', feedUrl)
 				continue
-				
+
 			item['authors'] = entry['authors']
 			# guid
 			# contents
@@ -172,10 +179,13 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 			if not 'updated' in item:
 				item['updated'] = -1
 
+
+			self.amqpint.put_item(json.dumps(item))
+
 			ret.append(item)
 		return ret
 
-	def insertFeed(self, tableName, tableKey, pluginName, feedUrl, feedContent):
+	def insertFeed(self, tableName, tableKey, pluginName, feedUrl, feedContent, badwords):
 
 		dbFunc = TextScrape.utilities.Proxy.EmptyProxy(tableKey=tableKey, tableName=tableName, scanned=[feedUrl])
 
@@ -216,9 +226,13 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 
 				dbFunc.upsert(item['linkUrl'], dlstate=0, distance=0, walkLimit=1)
 				for link in ret['plainLinks']:
-					dbFunc.upsert(link, dlstate=0, distance=0, walkLimit=1)
+					if not any([badword in link for badword in badwords]):
+						dbFunc.upsert(link, dlstate=0, distance=0, walkLimit=1)
+					else:
+						print("Filtered link!", link)
 				for link in ret['rsrcLinks']:
-					dbFunc.upsert(link, distance=0, walkLimit=1, istext=False)
+					if not any([badword in link for badword in badwords]):
+						dbFunc.upsert(link, distance=0, walkLimit=1, istext=False)
 
 
 
