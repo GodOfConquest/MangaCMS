@@ -23,7 +23,7 @@ import bs4
 import re
 import json
 import ScrapePlugins.RetreivalBase
-
+from mimetypes import guess_extension
 from concurrent.futures import ThreadPoolExecutor
 
 import processDownload
@@ -53,6 +53,22 @@ class ContentLoader(ScrapePlugins.RetreivalBase.ScraperBase):
 		fileN = urllib.parse.unquote(urllib.parse.urlparse(handle.geturl())[2].split("/")[-1])
 		fileN = bs4.UnicodeDammit(fileN).unicode_markup
 		self.log.info("retreived image '%s' with a size of %0.3f K", fileN, len(content)/1000.0)
+
+		if not "." in fileN:
+			info = handle.info()
+			if 'Content-Type' in info:
+				tp = info['Content-Type']
+				if ";" in tp:
+					tp = tp.split(";")[0]
+				ext = guess_extension(tp)
+				if ext == None:
+					ext = "unknown_ftype"
+				print(info['Content-Type'], ext)
+				fileN += "." + ext
+			else:
+				fileN += ".jpg"
+
+
 		return fileN, content
 
 
@@ -183,14 +199,14 @@ class ContentLoader(ScrapePlugins.RetreivalBase.ScraperBase):
 if __name__ == '__main__':
 	import utilities.testBase as tb
 
-	with tb.testSetup(startObservers=False):
+	with tb.testSetup(startObservers=True):
 		cl = ContentLoader()
 
 		# pg = 'http://dynasty-scans.com/chapters/qualia_the_purple_ch16'
 		# inMarkup = cl.wg.getpage(pg)
 		# cl.getImageUrls(inMarkup, pg)
-		# cl.go()
+		cl.go()
 		# cl.getLink('http://www.webtoons.com/viewer?titleNo=281&episodeNo=3')
-		cl.getImageUrls('http://kissmanga.com/Manga/Hanza-Sky/Ch-031-Read-Online?id=225102')
+		# cl.getImageUrls('http://kissmanga.com/Manga/Hanza-Sky/Ch-031-Read-Online?id=225102')
 
 

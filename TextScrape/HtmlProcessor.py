@@ -74,6 +74,7 @@ GLOBAL_BAD = [
 			'pixel.wp.com',
 			'a.wikia-beacon.com',
 			'b.scorecardresearch.com',
+			'//mail.google.com',
 	]
 
 GLOBAL_DECOMPOSE_BEFORE = [
@@ -100,21 +101,21 @@ class HtmlPageProcessor(TextScrape.ProcessorBase.PageProcessor):
 		self.content = pgContent
 		self.pageUrl = pageUrl
 
-		kwargs.setdefault("badwords",         [])
-		kwargs.setdefault("decompose",        [])
-		kwargs.setdefault("decomposeBefore",  [])
-		kwargs.setdefault("fileDomains",      [])
-		kwargs.setdefault("allImages",        True)
-		kwargs.setdefault("followGLinks",     True)
-		kwargs.setdefault("ignoreBadLinks",   False)
-		kwargs.setdefault("tld",              set())
-		kwargs.setdefault("stripTitle",       '')
+		kwargs.setdefault("badwords",           [])
+		kwargs.setdefault("decompose",          [])
+		kwargs.setdefault("decomposeBefore",    [])
+		kwargs.setdefault("fileDomains",        [])
+		kwargs.setdefault("allImages",          True)
+		kwargs.setdefault("followGLinks",       True)
+		kwargs.setdefault("ignoreBadLinks",     False)
+		kwargs.setdefault("tld",                set())
+		kwargs.setdefault("stripTitle",         '')
+		kwargs.setdefault("ignoreMissingTitle", False)
 
-
-
-		self.allImages       = kwargs["allImages"]
-		self.stripTitle      = kwargs["stripTitle"]
-		self.ignoreBadLinks  = kwargs['ignoreBadLinks']
+		self.ignoreMissingTitle = kwargs["ignoreMissingTitle"]
+		self.allImages          = kwargs["allImages"]
+		self.stripTitle         = kwargs["stripTitle"]
+		self.ignoreBadLinks     = kwargs['ignoreBadLinks']
 
 
 		self._badwords       = set(GLOBAL_BAD)
@@ -149,6 +150,12 @@ class HtmlPageProcessor(TextScrape.ProcessorBase.PageProcessor):
 			self._scannedDomains.add('https://docs.google.com/spreadsheets/')
 			self._scannedDomains.add('https://drive.google.com/folderview')
 			self._scannedDomains.add('https://drive.google.com/open')
+
+			# and relink the google docs as well.
+			self._relinkDomains.add('https://docs.google.com/document/')
+			self._relinkDomains.add('https://docs.google.com/spreadsheets/')
+			self._relinkDomains.add('https://drive.google.com/folderview')
+			self._relinkDomains.add('https://drive.google.com/open')
 
 
 
@@ -396,10 +403,11 @@ class HtmlPageProcessor(TextScrape.ProcessorBase.PageProcessor):
 
 		# Process page with readability, extract title.
 		pgTitle, pgBody = self.cleanHtmlPage(soup, url=self.pageUrl)
-		if 'has no title!' in pgTitle:
-			self.log.warn("Page has no title: '%s' (len %s)", pgTitle, len(pgBody))
-		else:
-			self.log.info("Page with title '%s' retreived.", pgTitle)
+		if not self.ignoreMissingTitle:
+			if 'has no title!' in pgTitle:
+				self.log.warn("Page has no title: '%s' (len %s)", pgTitle, len(pgBody))
+			else:
+				self.log.info("Page with title '%s' retreived.", pgTitle)
 
 		ret = {}
 

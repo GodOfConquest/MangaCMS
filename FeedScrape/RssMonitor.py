@@ -6,23 +6,30 @@ import abc
 import feedparser
 import FeedScrape.RssMonitorDbBase
 import TextScrape.utilities.Proxy
-import time
+import FeedScrape.FeedDataParser
+import calendar
 import json
 import bs4
 import TextScrape.RelinkLookup
 import urllib.error
 import FeedScrape.AmqpInterface
+import readability.readability
 # import TextScrape.RELINKABLE as RELINKABLE
 import settings
 # pylint: disable=W0201
+#
+import TextScrape.HtmlProcessor
+import urllib.parse
 
 class EmptyFeedError(Exception):
 	pass
 
-class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
+class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, FeedScrape.FeedDataParser.DataParser, metaclass=abc.ABCMeta):
 	__metaclass__ = abc.ABCMeta
 
 	loggerPath = 'Main.Rss'
+
+	htmlProcClass = TextScrape.HtmlProcessor.HtmlPageProcessor
 
 	def __init__(self):
 		super().__init__()
@@ -75,15 +82,40 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 				self.log.error('Failure retrieving feed at url "%s"!', feedUrl)
 
 
-	def extractContents(self, contentDat):
+	def extractContents(self, feedUrl, contentDat):
 		# TODO: Add more content type parsing!
 		if len(contentDat) != 1:
 			raise ValueError("How can one post have multiple contents?")
 
 		contentDat = contentDat[0]
+
+		baseurl = urllib.parse.urlsplit(feedUrl).netloc.lower()
+		tld = set([baseurl.split(".")[-1]])
+
+		scraper = self.htmlProcClass(
+									baseUrls           = [feedUrl],
+									pageUrl            = feedUrl,
+									pgContent          = contentDat['value'],
+									loggerPath         = self.loggerPath,
+									followGLinks       = True,
+									tld                = tld,
+									relinkable         = self.relink,
+									ignoreMissingTitle = True,
+								)
+
+		try:
+			extracted = scraper.extractContent()
+		except readability.readability.Unparseable:
+			self.log.error("Parsing error in content!")
+			return contentDat, []
+		# if extracted['plainLinks']:
+		# 	for key, value in extracted.items():
+		# 		print("'{key}' - '{val}'".format(key=key, val=value))
+
+
 		assert contentDat['type'] == 'text/html'
 
-		content = contentDat['value']
+		content = extracted['contents']
 
 		# Use a parser that doesn't try to generate a well-formed output (and therefore doesn't insert
 		# <html> or <body> into content that will be only a part of the rendered page)
@@ -109,7 +141,9 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 			except RuntimeError:
 				cont = '<H2>WARNING - Failure when cleaning and extracting content!</H2><br><br>'
 				cont += content
-		return cont, links
+
+
+		return extracted
 
 	def extractSummary(self, contentDat):
 		# TODO: Some stats to try to guess is the content is HTML or not (and then whack it with markdown!)
@@ -125,7 +159,7 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 
 		return contentDat, links
 
-	def processFeed(self, feed, feedUrl):
+	def processFeed(self, feed, feedUrl, feedtype='eastern'):
 
 
 		meta = feed['feed']
@@ -139,21 +173,19 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 			item['title'] = entry['title']
 			item['guid'] = entry['guid']
 
-			tags = []
+			item['tags'] = []
 			if 'tags' in entry:
 				for tag in entry['tags']:
-					tags.append(tag['term'])
-
-			item['tags'] = json.dumps(tags)
+					item['tags'].append(tag['term'])
 
 
 			item['linkUrl'] = entry['link']
 
 
 			if 'content' in entry:
-				item['contents'], links = self.extractContents(entry['content'])
+				item['contents'] = entry['content']
 			elif 'summary' in entry:
-				item['contents'], links = self.extractSummary(entry['summary'])
+				item['contents'] = entry['summary']
 			else:
 				self.log.error('Empty item in feed?')
 				self.log.error('Feed url: %s', feedUrl)
@@ -169,18 +201,22 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 
 
 			if 'updated_parsed' in entry:
-				item['updated'] = time.mktime(entry['updated_parsed'])
+				item['updated'] = calendar.timegm(entry['updated_parsed'])
 
 			if 'published_parsed' in entry:
-				item['published'] = time.mktime(entry['published_parsed'])
+				item['published'] = calendar.timegm(entry['published_parsed'])
 
 			if not 'published' in item or ('updated' in item and item['published'] > item['updated']):
 				item['published'] = item['updated']
 			if not 'updated' in item:
 				item['updated'] = -1
 
+			item['feedtype'] = feedtype
 
-			self.amqpint.put_item(json.dumps(item))
+
+			self.processFeedData(item)
+
+			item['tags'] = json.dumps(item['tags'])
 
 			ret.append(item)
 		return ret
@@ -194,19 +230,22 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 				# The tsuki feed includes changes to user pages. Fuck that noise. Ignore that shit.
 				continue
 
+			try:
+				ret = self.extractContents(feedUrl, item['contents'])
+				# print(ret)
+				# ret = dbFunc.processHtmlPage(feedUrl, item['contents'])
+			except RuntimeError:
+				ret = {}
+				ret['contents'] = '<H2>WARNING - Failure when cleaning and extracting content!</H2><br><br>'
+				ret['contents'] += item['contents']
+
+				ret['rsrcLinks'] = []
+				ret['plainLinks'] = []
+
 			if not self.itemInDB(contentid=item['guid']):
 
 				self.log.info("New article in feed!")
 
-				try:
-					ret = dbFunc.processHtmlPage(feedUrl, item['contents'])
-				except RuntimeError:
-					ret = {}
-					ret['contents'] = '<H2>WARNING - Failure when cleaning and extracting content!</H2><br><br>'
-					ret['contents'] += item['contents']
-
-					ret['rsrcLinks'] = []
-					ret['plainLinks'] = []
 
 				row = {
 					'srcname'    : tableKey,
@@ -240,9 +279,10 @@ class RssMonitor(FeedScrape.RssMonitorDbBase.RssDbBase, metaclass=abc.ABCMeta):
 
 class RssTest(RssMonitor):
 
-	tableKey = 'test'
+	tableKey = 'wp'
 
-	# feedUrls = [
+	feedUrls = [
+		'https://bluesilvertranslations.wordpress.com/feed/',
 	# 	'http://krytykal.org/feed/',
 	# 	'https://oniichanyamete.wordpress.com/feed/',
 	# 	'http://skythewood.blogspot.com/feeds/posts/default',
@@ -251,7 +291,7 @@ class RssTest(RssMonitor):
 	# 	'http://guhehe.net/feed/',
 	# 	'http://japtem.com/feed/',
 	# 	'http://giraffecorps.liamak.net/feed/',
-	# ]
+	]
 
 
 
