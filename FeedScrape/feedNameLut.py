@@ -31,6 +31,7 @@ def getNiceName(srcurl):
 		'gekkahimethetranslation.wordpress.com'     : '(NanoDesu) - Gekka no Utahime to Magi no Ou',
 		'giraffecorps.liamak.net'                   : 'Giraffe Corps',
 		'gjbuthetranslation.wordpress.com'          : '(NanoDesu) - GJ-Bu',
+		'gravitytales.com'                          : 'Gravity Tales',
 		'gravitytranslations.com'                   : 'Gravity Translation',
 		'grimgalthetranslation.wordpress.com'       : '(NanoDesu) - Hai to Gensou no Grimgal',
 		'guhehe.net'                                : 'guhehe.TRANSLATIONS',
@@ -143,11 +144,18 @@ def getNiceName(srcurl):
 		'www.risingdragonstranslation.com'          : 'Rising Dragons Translation',
 		'www.sousetsuka.com'                        : 'Sousetsuka',
 		'www.taptaptaptaptap.net'                   : 'tap-trans » tappity tappity tap.',
+		'www.wuxiatranslations.com'                 : 'Wuxia Translations',
 		'www.wuxiaworld.com'                        : 'Wuxiaworld',
 		'xcrossj.blogspot.com'                      : 'XCrossJ',
 		'yoraikun.wordpress.com'                    : 'Yoraikun Translation',
 		'youtsubasilver.wordpress.com'              : 'youtsubasilver\'s Blog',
 		'zmunjali.wordpress.com'                    : 'Roxism HQ',
+		'kirikotranslations.wordpress.com'          : 'Kiriko Translations',
+		'pummels.wordpress.com'                     : 'Pummels Translations',
+		'typemoondb.wordpress.com'                  : 'CapsUsingShift Tl',
+		'darktranslations.wordpress.com'            : 'Dark Translations',
+		'www.translationnations.com'                : 'Translation Nations',
+
 
 	}
 
