@@ -47,7 +47,7 @@ class Scrape(WordpressScrape):
 		# 'https://solitarytranslation.wordpress.com',  # Taken down?
 		# 'https://thecatscans.wordpress.com',
 
-		'http://www.wuxiatranslations.com',
+		'https://gilatranslationmonster.wordpress.com',
 		'https://sylver135.wordpress.com',
 		'https://bingnovels.wordpress.com',
 		'https://ruzetranslations.wordpress.com',
@@ -104,6 +104,8 @@ class Scrape(WordpressScrape):
 		'https://korezombiethetranslation.wordpress.com',
 		'https://kurenaithetranslation.wordpress.com',
 		'https://kyakka.wordpress.com',
+		'https://isekaicyborg.wordpress.com',
+		'https://sotranslations.wordpress.com',
 		'https://loliquent.wordpress.com',
 		'https://lorcromwell.wordpress.com',
 		'https://lordofscrubs.wordpress.com',
@@ -168,6 +170,10 @@ class Scrape(WordpressScrape):
 		'https://youtsubasilver.wordpress.com',
 		'https://zmunjali.wordpress.com',
 
+		'https://rebirthonlinelightnovel.wordpress.com',
+		'https://lnaddiction.wordpress.com',
+		'https://bingnovels.wordpress.com',
+
 
 		# Non explicitly wordpress blogs (that use wordpress internally)
 		'http://avertranslation.com',
@@ -181,14 +187,16 @@ class Scrape(WordpressScrape):
 		'http://www.lingson.com',
 		'http://shintranslations.com',
 		'http://risingdragons.co',
-		'http://www.translationnations.com/',
+		'http://www.translationnations.com',
+		'http://www.wuxiatranslations.com',
+		'http://pandatranslations.net',
 
 		# This is WP, but it uses an custom theme I haven't tested against.
 		'http://arkmachinetranslations.com',
 		'http://flowerbridgetoo.com',
 
 		# Seriously bro, you can change your A record:
-		'http://tototr.com',
+		# 'http://tototr.com',
 		'http://tototrans.com',
 		'http://totobro.com',
 
@@ -273,6 +281,7 @@ class Scrape(WordpressScrape):
 		{'class'           : 'sd-content'},
 		{'class'           : 'sd-title'},
 		{'class'           : 'sidebar'},
+		{'class'           : 'site-header'},
 		{'class'           : 'tabs-outer'},
 		{'class'           : 'widget-area'},
 		{'class'           : 'widget-container'},
@@ -289,10 +298,15 @@ class Scrape(WordpressScrape):
 		{'id'              : 'carousel-reblog-box'},
 		{'id'              : 'colophon'},
 		{'id'              : 'comments'},
+		{'id'              : 'conversation'},
 		{'id'              : 'credit-wrapper'},
 		{'id'              : 'entry-author-info'},
 		{'id'              : 'footer'},
 		{'id'              : 'header'},
+		{'id'              : 'layout'},
+		{'id'              : 'masthead'},
+		{'id'              : 'global-alert'},
+		{'id'              : 'main-nav'},
 		{'id'              : 'header-meta'},
 		{'id'              : 'headerimg'},
 		{'id'              : 'infinite-footer'},
@@ -366,7 +380,8 @@ class Scrape(WordpressScrape):
 		'| Shin Sekai Yori – From the New World',
 		':: tappity tappity tap.',
 		'Fanatical |',
-		'| Fanatical'
+		'| A fish once said this to me:',
+		'| Fanatical',
 
 	]
 
@@ -389,8 +404,8 @@ class Scrape(WordpressScrape):
 
 	# Methods to allow the child-class to modify the content at various points.
 	def extractTitle(self, srcSoup, doc, url):
-
 		title = doc.title()
+
 		if not title:
 			title = srcSoup.title.get_text().strip()
 
@@ -414,9 +429,9 @@ class Scrape(WordpressScrape):
 
 		return title
 
-# SELECT title FROM book_items WHERE contents LIKE '%tang san%';
+	# SELECT title FROM book_items WHERE contents LIKE '%tang san%';
 
-# SELECT title FROM book_items WHERE contents LIKE '%yuusha party no kawaii ko ga ita no de, kokuhaku shite mita%';
+	# SELECT title FROM book_items WHERE contents LIKE '%yuusha party no kawaii ko ga ita no de, kokuhaku shite mita%';
 
 
 	# def checkDomain(self, url):
@@ -431,7 +446,12 @@ class Scrape(WordpressScrape):
 
 def test():
 	scrp = Scrape()
-	scrp.crawl()
+
+	ret = scrp.retreivePlainResource('https://natsutl.wordpress.com/2015/06/12/magi-craft-meister-volume-2-chapter-7-8-9/')
+	print(ret)
+	scrp.processResponse(ret, 1)
+	scrp.crawl(shallow=True)
+	# scrp.crawl()
 	# scrp.retreiveItemFromUrl(scrp.startUrl)
 
 

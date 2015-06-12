@@ -12,26 +12,26 @@ import webFunctions
 import urllib.error
 
 class Scrape(TextScrape.SiteArchiver.SiteArchiver):
-	tableKey = 'japtem'
-	loggerPath = 'Main.Text.JapTem.Scrape'
-	pluginName = 'JapTemScrape'
+	tableKey = 'sousetsuka'
+	loggerPath = 'Main.Text.Sousetsuka.Scrape'
+	pluginName = 'SousetsukaScrape'
 
 	wg = webFunctions.WebGetRobust(logPath=loggerPath+".Web")
 
-	threads = 4
+	threads = 1
+	FOLLOW_GOOGLE_LINKS = False
 
-	feeds = [
-		'http://japtem.com/feed/'
-	]
-
-
-	baseUrl = [
-			"http://japtem.com/",
-			"http://www.japtem.com/",
-		]
+	baseUrl = "http://www.sousetsuka.com/"
 	startUrl = baseUrl
 
+	feeds = [
+		'http://www.sousetsuka.com/feeds/posts/default'
+	]
+
 	badwords = [
+				"pages/reportAbuse",
+
+				"fanfic.php",
 				"/viewtopic.php",
 				"/memberlist.php",
 				"/search.php",
@@ -39,11 +39,15 @@ class Scrape(TextScrape.SiteArchiver.SiteArchiver):
 				"/styles/prosilver/theme/",
 				"/forums/",
 				"/forum/",
+				"/fanfic",         # Fucking slash fics.
 				"/cdn-cgi/",
 				"/help/",
 				"?share=",
+				"showComment=",
 				"?popup=",
 				"viewforum.php",
+				"/search?",
+				"/feeds/comments/",
 				"/wp-login.php",
 				"/#comments",      # Ignore in-page anchor tags
 				"/staff/"]
@@ -59,7 +63,9 @@ class Scrape(TextScrape.SiteArchiver.SiteArchiver):
 
 
 	decomposeBefore = [
-		{'id'      :'disqus_thread'},
+		{'id'      : 'disqus_thread'},
+		{'id'      : 'weebly-footer-signup-container'},
+		{'id'      : 'header-top'},
 	]
 
 
@@ -70,36 +76,36 @@ class Scrape(TextScrape.SiteArchiver.SiteArchiver):
 		{'class' : 'mobile-menu'},
 		{'class' : 'footer'},
 		{'class' : 'sidebar'},
+		{'class' : 'sidebar-wrapper'},
 		{'class' : 'disqus_thread'},
 		{'class' : 'sharedaddy'},
 		{'class' : 'pagination'},
 		{'class' : 'scrollUp'},
-		{'class' : 'fusion-footer'},
-		{'class' : 'share-box'},
-		{'class' : 'fusion-page-title-bar-breadcrumbs'},
-		{'class' : 'slidingbar-area'},
-		{'class' : 'fusion-header-wrapper'},
+		{'class' : 'comments'},
+		{'class' : 'blog-pager'},
+		{'class' : 'menucodenirvana'},
 
+		{'id' : 'navigation'},
+		{'id' : 'header'},
 		{'id' : 'slider-container'},
 		{'id' : 'secondarymenu-container'},
 		{'id' : 'mainmenu-container'},
 		{'id' : 'mobile-menu'},
 		{'id' : 'footer'},
 		{'id' : 'sidebar'},
-		{'id' : 'home'},
-		{'id' : 'sliders-container'},
+		{'id' : 'addthis-share'},
+		{'id' : 'credit'},
+		{'id' : 'postFooterGadgets'},
+		{'id' : 'comments'},
+		{'id' : 'blog-pager'},
+		{'id' : 'content-top'},
 		{'id' : 'disqus_thread'},
 		{'id' : 'sharedaddy'},
 		{'id' : 'scrollUp'},
-
-		{'class' : 'sticky-header'},
-		{'class' : 'header-wrapper'},
-		{'class' : 'footer-area'},
-		{'class' : 'share-box'},
-		{'id'    : 'slidingbar-area'},
-		{'id'    : 'footer'},
-		{'id'    : 'sliders-container'},
 	]
+
+	stripTitle = '| Sousetsuka'
+
 
 
 
@@ -108,9 +114,6 @@ class Scrape(TextScrape.SiteArchiver.SiteArchiver):
 def test():
 	scrp = Scrape()
 	scrp.crawl()
-	# scrp.retreiveItemFromUrl(scrp.startUrl)
-	# new = gdp.GDocExtractor.getDriveFileUrls('https://drive.google.com/folderview?id=0B-x_RxmzDHegRk5iblp4alZmSkU&usp=sharing')
-
 
 if __name__ == "__main__":
 	test()
