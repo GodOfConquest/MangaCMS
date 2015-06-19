@@ -174,6 +174,7 @@ class Scrape(WordpressScrape):
 		'https://lnaddiction.wordpress.com',
 		'https://bingnovels.wordpress.com',
 		'https://lazyneet.wordpress.com',
+		'https://durasama.wordpress.com',
 
 
 		# Non explicitly wordpress blogs (that use wordpress internally)
@@ -317,7 +318,9 @@ class Scrape(WordpressScrape):
 		{'id'              : 'nav-below'},
 		{'id'              : 'respond'},
 		{'id'              : 'secondary'},
+		{'id'              : 'conversation'},
 		{'id'              : 'sidebar'},
+		{'id'              : 'disqus-threadData'},
 		{'id'              : 'sidebar-wrapper'},
 		{'id'              : 'sidebar-wrapper1'}, # Yes, two `sidebar-wrapper` ids. Gah.
 		{'id'              : 'site-header'},
@@ -325,6 +328,9 @@ class Scrape(WordpressScrape):
 		{'name'            : 'likes-master'},
 		{'style'           : 'display:none'},
 		{'role'            : 'banner'},
+
+		# More Disqus bullshit
+		{'data-tracking-area'            : 'layout'},
 
 
 
